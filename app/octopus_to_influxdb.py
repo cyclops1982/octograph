@@ -94,16 +94,10 @@ def store_series(connection, series, metrics, rate_data):
         if conversion_factor:
             consumption *= conversion_factor
         rate = active_rate_field(measurement)
-        rate_cost = rate_data[rate]
-        cost = consumption * rate_cost
-        standing_charge = rate_data['standing_charge'] / 48  # 30 minute reads
         fields = {
             'consumption': consumption,
-            'cost': cost,
-            'total_cost': cost + standing_charge,
         }
         if agile_data:
-            agile_standing_charge = rate_data['agile_standing_charge'] / 48
             agile_unit_rate = agile_rates.get(
                 maya.parse(measurement['interval_end']).iso8601(),
                 rate_data[rate]  # cludge, use Go rate during DST changeover
@@ -112,7 +106,6 @@ def store_series(connection, series, metrics, rate_data):
             fields.update({
                 'agile_rate': agile_unit_rate,
                 'agile_cost': agile_cost,
-                'agile_total_cost': agile_cost + agile_standing_charge,
             })
         return fields
 
@@ -135,7 +128,6 @@ def store_series(connection, series, metrics, rate_data):
     ]
     write_api = connection.write_api(write_options=SYNCHRONOUS)
 
-    #print(measurements)
     for measurement in measurements:
         print(f"Measurement for {measurement['time']}:\n")
         for field in measurement['fields']:
@@ -143,21 +135,6 @@ def store_series(connection, series, metrics, rate_data):
             point = Point("electricity").field(field, measurement['fields'][field]).time(measurement['time'])
             write_api.write(bucket="energy", record=point)
 
-#    points = []
-#    for measurement in metrics:
-
-    #print(f"Measurement: {measurements}")
-        # point = Point("weather")\
-        #     .tag("location", "New York")\
-        #     .field("temperature", random.randint(-10, 30))\
-        #     .time(now - timedelta(days=i))
-        # points.append(point)
-
-
-#{'consumption': 0.091, 'interval_start': '2023-06-09T00:30:00+01:00', 'interval_end': '2023-06-09T01:00:00+01:00'}
-    
- #   write_api = connection.write_api(write_options=SYNCHRONOUS)
-  #  connection.write_points(measurements)
 
 
 @click.command()
@@ -249,7 +226,7 @@ def cmd(config_file, from_date, to_date, no_gas):
     )
     rate_data['electricity']['agile_unit_rates'] = retrieve_paginated_data( api_key, agile_url, from_iso, to_iso)
     click.echo(f' {len(rate_data["electricity"]["agile_unit_rates"])} rates.')
-    click.echo(rate_data["electricity"]["agile_unit_rates"])
+  #  click.echo(rate_data["electricity"]["agile_unit_rates"])
     store_series(influx, 'electricity', e_consumption, rate_data['electricity'])
 
     if no_gas == False:
