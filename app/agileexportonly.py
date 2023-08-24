@@ -39,6 +39,7 @@ def store_agilerates(connection, agile_data):
 
     points = []
     for agile_rate in agile_data:
+        print(f"{agile_rate['valid_from']} -> {agile_rate['valid_to']}: {agile_rate['value_inc_vat']}")
         points.append(Point("electricity").field("agile_rate", agile_rate['value_inc_vat']).time(agile_rate['valid_from']))
         if (len(points) > 48):
             write_api.write(bucket="energy", record=points)
@@ -58,7 +59,7 @@ def store_agilerates(connection, agile_data):
     type=click.Path(exists=True, dir_okay=True, readable=True),
 )
 @click.option('--from-date', default='yesterday midnight', type=click.STRING)
-@click.option('--to-date', default='today midnight', type=click.STRING)
+@click.option('--to-date', default='tomorrow midnight', type=click.STRING)
 def cmd(config_file, from_date, to_date):
 
     config = ConfigParser()
@@ -83,9 +84,7 @@ def cmd(config_file, from_date, to_date):
         nl=False
     )
     agile_rates = retrieve_paginated_data( api_key, agile_url, from_iso, to_iso)
-    click.echo(f' {len(agile_rates)} rates.')
-    print(agile_rates)
-  #  click.echo(rate_data["electricity"]["agile_unit_rates"])
+    click.echo(f' {len(agile_rates)} rates received.')
     store_agilerates(influx,  agile_rates)
 
 
